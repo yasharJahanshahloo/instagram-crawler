@@ -42,6 +42,19 @@ class Browser:
     def implicitly_wait(self, t):
         self.driver.implicitly_wait(t)
 
+    def find_by_xpath(self, xpath, elem=None, waittime=0):
+        obj = elem or self.driver
+
+        if waittime:
+            WebDriverWait(obj, waittime).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+
+        try:
+            return obj.find_element(By.XPATH, xpath)
+        except NoSuchElementException:
+            return None
+
     def find_one(self, css_selector, elem=None, waittime=0):
         obj = elem or self.driver
 
@@ -86,7 +99,7 @@ class Browser:
         self.driver.execute_script("arguments[0].click();", elem)
 
     def open_new_tab(self, url):
-        self.driver.execute_script("window.open('%s');" %url)
+        self.driver.execute_script("window.open('%s');" % url)
         self.driver.switch_to.window(self.driver.window_handles[1])
 
     def close_current_tab(self):

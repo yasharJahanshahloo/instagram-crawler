@@ -8,6 +8,7 @@ import sys
 import time
 import traceback
 from builtins import open
+from datetime import datetime
 from time import sleep
 
 from tqdm import tqdm
@@ -230,9 +231,9 @@ class InsCrawler(Logging):
                 sys.stderr.write(
                     "\x1b[1;31m"
                     + "Failed to fetch the post: "
-                    + cur_key if isinstance(cur_key,str) else 'URL not fetched'
-                    + "\x1b[0m"
-                    + "\n"
+                    + cur_key if isinstance(cur_key, str) else 'URL not fetched'
+                                                               + "\x1b[0m"
+                                                               + "\n"
                 )
                 traceback.print_exc()
 
@@ -269,12 +270,15 @@ class InsCrawler(Logging):
             for ele in ele_posts:
                 key = ele.get_attribute("href")
                 if key not in key_set:
-                    dict_post = { "key": key }
+                    dict_post = {"key": key}
                     ele_img = browser.find_one(".KL4Bh img", ele)
                     dict_post["caption"] = ele_img.get_attribute("alt")
                     dict_post["img_url"] = ele_img.get_attribute("src")
 
+                    t1 = datetime.now()
                     fetch_details(browser, dict_post)
+                    t2 = datetime.now()
+                    print("outside of fetch details: ", t2 - t1)
 
                     key_set.add(key)
                     posts.append(dict_post)

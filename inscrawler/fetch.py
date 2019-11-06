@@ -1,5 +1,6 @@
 import re
 from time import sleep
+from datetime import datetime
 
 from .settings import settings
 
@@ -23,6 +24,7 @@ def fetch_mentions(raw_test, dict_obj):
     mentions = get_parsed_mentions(raw_test)
     if mentions:
         dict_obj["mentions"] = mentions
+
 
 def fetch_hashtags(raw_test, dict_obj):
     if not settings.fetch_hashtags:
@@ -59,6 +61,7 @@ def fetch_imgs(browser, dict_post):
             break
 
     dict_post["img_urls"] = list(img_urls)
+
 
 def fetch_likes_plays(browser, dict_post):
     if not settings.fetch_likes_plays:
@@ -116,37 +119,41 @@ def fetch_caption(browser, dict_post):
 
     if len(ele_comments) > 0:
 
-        temp_element = browser.find("span",ele_comments[0])
+        temp_element = browser.find("span", ele_comments[0])
 
         for element in temp_element:
 
-            if element.text not in ['Verified',''] and 'caption' not in dict_post:
+            if element.text not in ['Verified', ''] and 'caption' not in dict_post:
                 dict_post["caption"] = element.text
 
-        fetch_mentions(dict_post.get("caption",""), dict_post)
-        fetch_hashtags(dict_post.get("caption",""), dict_post)
+        fetch_mentions(dict_post.get("caption", ""), dict_post)
+        fetch_hashtags(dict_post.get("caption", ""), dict_post)
 
 
-def fetch_comments(browser, dict_post):
+def fetch_comments(browser, dict_post, for_tag=False):
     if not settings.fetch_comments:
         return
-
-    show_more_selector = "button .glyphsSpriteCircle_add__outline__24__grey_9"
-    show_more = browser.find_one(show_more_selector)
-    while show_more:
-        show_more.location_once_scrolled_into_view
-        show_more.click()
-        sleep(0.3)
+    if not for_tag:
+        show_more_selector = "button .glyphsSpriteCircle_add__outline__24__grey_9"
         show_more = browser.find_one(show_more_selector)
+        while show_more:
+            show_more.location_once_scrolled_into_view
+            show_more.click()
+            sleep(0.3)
+            show_more = browser.find_one(show_more_selector)
 
-    show_comment_btns = browser.find(".EizgU")
-    for show_comment_btn in show_comment_btns:
-        show_comment_btn.location_once_scrolled_into_view
-        show_comment_btn.click()
-        sleep(0.3)
+    # show_comment_btns = browser.find(".EizgU")
+    # for show_comment_btn in show_comment_btns:
+    #     show_comment_btn.location_once_scrolled_into_view
+    #     try:
+    #         show_comment_btn.click()
+    #     except Exception:
+    #         print("not clickable comment button in: ", dict_post.get('key', "default post"))
+    #     # sleep(0.1)  # previous value was 0.3
 
     ele_comments = browser.find(".eo2As .gElp9")
     comments = []
+    t1 = datetime.now()
     for els_comment in ele_comments[1:]:
         author = browser.find_one(".FPmhX", els_comment).text
 
@@ -154,25 +161,28 @@ def fetch_comments(browser, dict_post):
 
         for element in temp_element:
 
-            if element.text not in ['Verified','']:
+            if element.text not in ['Verified', '']:
                 comment = element.text
 
         comment_obj = {"author": author, "comment": comment}
 
-        fetch_mentions(comment, comment_obj)
-        fetch_hashtags(comment, comment_obj)
+        # fetch_mentions(comment, comment_obj) #TODO uncomment!
+        # fetch_hashtags(comment, comment_obj)
 
         comments.append(comment_obj)
-
+    t2 = datetime.now()
+    print("waiting in comments: ", t2 - t1)
     if comments:
         dict_post["comments"] = comments
 
 
 def fetch_initial_comment(browser, dict_post):
-    comments_elem = browser.find_one("ul.XQXOT")
-    first_post_elem = browser.find_one(".ZyFrc", comments_elem)
-    caption = browser.find_one("span", first_post_elem)
-
+    # comments_elem = browser.find_one("ul.XQXOT")
+    # first_post_elem = browser.find_one(".ZyFrc", comments_elem)
+    # caption = browser.find_one("span", first_post_elem)
+    # if caption:
+    caption = browser.find_by_xpath(
+        '//*[@id="react-root"]/section/main/div/div/article/div[2]/div[1]/ul/div/li/div/div/div[2]/span')
     if caption:
         dict_post["description"] = caption.text
 
@@ -184,13 +194,18 @@ def fetch_details(browser, dict_post):
     browser.open_new_tab(dict_post["key"])
 
     username = browser.find_one("a.FPmhX")
-    location = browser.find_one("a.O4GlU")
+    # location = browser.find_one("a.O4GlU") TODO uncomment some later line too!
 
     if username:
         dict_post["username"] = username.text
-    if location:
-        dict_post["location"] = location.text
-
+    # if location:
+    #     dict_post["location"] = location.text
     fetch_initial_comment(browser, dict_post)
-
+    t1 = datetime.now()
+    try:
+        fetch_comments(browser, dict_post, for_tag=True)
+    except Exception:
+        print(Exception)
     browser.close_current_tab()
+    t2 = datetime.now()
+    print("waiting in fetch details: ", t2 - t1)
