@@ -6,7 +6,10 @@ import json
 import sys
 from io import open
 
+from elasticsearch import Elasticsearch
+
 from inscrawler import InsCrawler
+from inscrawler.elastic import insert
 from inscrawler.settings import override_settings
 from inscrawler.settings import prepare_override_settings
 
@@ -53,8 +56,14 @@ def arg_required(args, fields=[]):
 def output(data, filepath):
     out = json.dumps(data, ensure_ascii=False)
     if filepath:
-        with open(filepath, "w", encoding="utf8") as f:
-            f.write(out)
+        if 'es:' in filepath:
+            index = filepath[3:]
+            es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+            for post in data:
+                insert(index, post, es)
+        else:
+            with open(filepath, "w", encoding="utf8") as f:
+                f.write(out)
     else:
         print(out)
 
