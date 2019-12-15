@@ -26,6 +26,7 @@ from .fetch import fetch_details
 from .utils import instagram_int
 from .utils import randmized_sleep
 from .utils import retry
+from .elastic import insert
 
 
 class Logging(object):
@@ -132,7 +133,7 @@ class InsCrawler(Logging):
             "website": user_data["external_url"],
         }
 
-    def get_user_posts(self, username, number=None, detail=False):
+    def get_user_posts(self, username, number=None, detail=False, es=None):
         user_profile = self.get_user_profile(username)
         if not number:
             number = instagram_int(user_profile["post_num"])
@@ -140,7 +141,7 @@ class InsCrawler(Logging):
         self._dismiss_login_prompt()
 
         if detail:
-            return self._get_posts_full(number)
+            return self._get_posts_full(number, es)
         else:
             return self._get_posts(number)
 
@@ -174,7 +175,7 @@ class InsCrawler(Logging):
             else:
                 break
 
-    def _get_posts_full(self, num):
+    def _get_posts_full(self, num, es=None):
         @retry()
         def check_next_post(cur_key):
             ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
@@ -207,6 +208,7 @@ class InsCrawler(Logging):
                 check_next_post(cur_key)
 
                 # Fetching datetime and url as key
+                username = browser.find_by_xpath('/html/body/div[4]/div[2]/div/article/header/div[2]/div[1]/div[1]/h2/a').text
                 ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
                 cur_key = ele_a_datetime.get_attribute("href")
                 dict_post["key"] = cur_key
@@ -216,6 +218,7 @@ class InsCrawler(Logging):
                 fetch_likers(browser, dict_post)
                 fetch_caption(browser, dict_post)
                 fetch_comments(browser, dict_post)
+                insert(index = username, dict_post= dict_post, es=es)
 
             except RetryException:
                 sys.stderr.write(
@@ -225,7 +228,8 @@ class InsCrawler(Logging):
                     + "\x1b[0m"
                     + "\n"
                 )
-                break
+                traceback.print_exc()
+                # break TODO
 
             except Exception:
                 sys.stderr.write(
@@ -233,12 +237,13 @@ class InsCrawler(Logging):
                     + "Failed to fetch the post: "
                     + cur_key if isinstance(cur_key, str) else 'URL not fetched'
                                                                + "\x1b[0m"
-                                                               + "\n"
+                                                               + "\n************\n"
                 )
                 traceback.print_exc()
 
             self.log(json.dumps(dict_post, ensure_ascii=False))
             dict_posts[browser.current_url] = dict_post
+ 
 
             pbar.update(1)
             left_arrow = browser.find_one(".HBoOv")

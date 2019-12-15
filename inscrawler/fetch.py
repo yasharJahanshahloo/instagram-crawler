@@ -42,13 +42,13 @@ def fetch_datetime(browser, dict_post):
 
 
 def fetch_imgs(browser, dict_post):
-    img_urls = set()
+    img_urls = list()
     while True:
         ele_imgs = browser.find("._97aPb img", waittime=10)
 
         if isinstance(ele_imgs, list):
             for ele_img in ele_imgs:
-                img_urls.add(ele_img.get_attribute("src"))
+                img_urls.append(ele_img.get_attribute("src"))
         else:
             break
 

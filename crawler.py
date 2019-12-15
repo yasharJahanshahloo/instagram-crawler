@@ -12,6 +12,7 @@ from inscrawler import InsCrawler
 from inscrawler.elastic import insert
 from inscrawler.settings import override_settings
 from inscrawler.settings import prepare_override_settings
+from inscrawler.settings import settings
 
 
 def usage():
@@ -26,9 +27,9 @@ def usage():
     """
 
 
-def get_posts_by_user(username, number, detail, debug):
+def get_posts_by_user(username, number, detail, debug, es=None):
     ins_crawler = InsCrawler(has_screen=debug)
-    return ins_crawler.get_user_posts(username, number, detail)
+    return ins_crawler.get_user_posts(username, number, detail, es)
 
 
 def get_profile(username):
@@ -56,14 +57,8 @@ def arg_required(args, fields=[]):
 def output(data, filepath):
     out = json.dumps(data, ensure_ascii=False)
     if filepath:
-        if 'es:' in filepath:
-            index = filepath[3:]
-            es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
-            for post in data:
-                insert(index, post, es)
-        else:
-            with open(filepath, "w", encoding="utf8") as f:
-                f.write(out)
+        with open(filepath, "w", encoding="utf8") as f:
+            f.write(out)
     else:
         print(out)
 
@@ -85,11 +80,14 @@ if __name__ == "__main__":
 
     override_settings(args)
 
+    
+    es = Elasticsearch([{'host': 'localhost', 'port': 9200}]) if settings.elastic else None
+
     if args.mode in ["posts", "posts_full"]:
         arg_required("username")
         output(
             get_posts_by_user(
-                args.username, args.number, args.mode == "posts_full", args.debug
+                args.username, args.number, args.mode == "posts_full", args.debug,es
             ),
             args.output,
         )
