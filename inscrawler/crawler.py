@@ -208,7 +208,8 @@ class InsCrawler(Logging):
                 check_next_post(cur_key)
 
                 # Fetching datetime and url as key
-                username = browser.find_by_xpath('/html/body/div[4]/div[2]/div/article/header/div[2]/div[1]/div[1]/h2/a').text
+                username = browser.find_one('.BrX75')
+                username = browser.find_one(elem=username, css_selector=".FPmhX" ).text
                 ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
                 cur_key = ele_a_datetime.get_attribute("href")
                 dict_post["key"] = cur_key
