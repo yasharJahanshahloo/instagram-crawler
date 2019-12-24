@@ -48,11 +48,11 @@ def get_posts_by_hashtag(tag, number, debug):
     ins_crawler = InsCrawler(has_screen=debug)
     return ins_crawler.get_latest_posts_by_tag(tag, number)
 
-def get_popular_users(starting_user, debug):
+def get_popular_users(starting_user, debug,es=None):
     ins_crawler = InsCrawler(has_screen=debug)
     if settings.login:
         ins_crawler.login()
-    return ins_crawler.get_popular_profiles(starting_user)
+    return ins_crawler.get_popular_profiles(starting_user,es=es)
 
 
 def arg_required(args, fields=[]):
@@ -112,6 +112,6 @@ if __name__ == "__main__":
         )
     elif args.mode == "popular":
         arg_required("username")
-        output(get_popular_users(args.username, args.debug), args.output)
+        output(get_popular_users(args.username, args.debug, es=es), args.output)
     else:
         usage()

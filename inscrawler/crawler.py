@@ -26,7 +26,7 @@ from .fetch import fetch_details
 from .utils import instagram_int
 from .utils import randmized_sleep
 from .utils import retry
-from .elastic import insert_post
+from .elastic import insert_post,insert_popular
 
 
 class Logging(object):
@@ -151,7 +151,7 @@ class InsCrawler(Logging):
         self.browser.get(url)
         return self._get_posts(num)
 
-    def get_popular_profiles(self, starting_user):
+    def get_popular_profiles(self, starting_user,es=None):
         user_profile = self.get_user_profile(starting_user)
         print("profile: ", user_profile)
         browser = self.browser
@@ -166,7 +166,8 @@ class InsCrawler(Logging):
             browser.panel_scroll_down(followers[0])
             followers = browser.find(css_selector=".FPmhX")
         for follower in followers:
-            print("++++ --> ",follower.text)
+            if _is_popular(follower):
+                insert_popular(username=followers.text, es=es)
 
 
 
@@ -341,3 +342,11 @@ class InsCrawler(Logging):
         pbar.close()
         print("Done. Fetched %s posts." % (min(len(posts), num)))
         return posts[:num]
+    
+    def _is_popular(self, username):
+        browser = self.browser
+        url = "%s/%s/" % (InsCrawler.URL, username)
+        browser.open_new_tab(url)
+        statistics = [ele.text for ele in browser.find(".g47SY")]
+        post_num, follower_num, following_num = statistics
+        return instagram_int(follower_num) >= 15000
