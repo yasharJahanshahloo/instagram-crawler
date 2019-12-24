@@ -3,6 +3,7 @@ from time import sleep
 from datetime import datetime
 
 from .settings import settings
+from .elastic import insert_comment
 
 
 def get_parsed_mentions(raw_text):
@@ -130,7 +131,7 @@ def fetch_caption(browser, dict_post):
         fetch_hashtags(dict_post.get("caption", ""), dict_post)
 
 
-def fetch_comments(browser, dict_post, for_tag=False):
+def fetch_comments(browser, dict_post, for_tag=False, es = None):
     if not settings.fetch_comments:
         return
     if not for_tag:
@@ -153,9 +154,10 @@ def fetch_comments(browser, dict_post, for_tag=False):
 
     ele_comments = browser.find(".eo2As .gElp9")
     comments = []
-    t1 = datetime.now()
     for els_comment in ele_comments[1:]:
         author = browser.find_one(".FPmhX", els_comment).text
+        time = browser.find_by_tag("time", els_comment).get_attribute("datetime")
+        print("comment time is :  ", time)
 
         temp_element = browser.find("span", els_comment)
 
@@ -164,14 +166,17 @@ def fetch_comments(browser, dict_post, for_tag=False):
             if element.text not in ['Verified', '']:
                 comment = element.text
 
-        comment_obj = {"author": author, "comment": comment}
+        comment_obj = {"author": author, 
+                       "comment": comment, 
+                       "time":time,
+                       "fetched_time":datetime.now(),
+                       "post_id":dict_post["key"]}
 
+        insert_comment(index="comments", comment=comment_obj, es=es)
         # fetch_mentions(comment, comment_obj) #TODO uncomment!
         # fetch_hashtags(comment, comment_obj)
 
         comments.append(comment_obj)
-    t2 = datetime.now()
-    print("waiting in comments: ", t2 - t1)
     if comments:
         dict_post["comments"] = comments
 

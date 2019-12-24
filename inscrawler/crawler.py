@@ -26,7 +26,7 @@ from .fetch import fetch_details
 from .utils import instagram_int
 from .utils import randmized_sleep
 from .utils import retry
-from .elastic import insert
+from .elastic import insert_post
 
 
 class Logging(object):
@@ -90,6 +90,7 @@ class InsCrawler(Logging):
         @retry()
         def check_login():
             if browser.find_one('input[name="username"]'):
+                print("wrong username or password")
                 raise RetryException()
 
         check_login()
@@ -218,8 +219,9 @@ class InsCrawler(Logging):
                 fetch_likes_plays(browser, dict_post)
                 fetch_likers(browser, dict_post)
                 fetch_caption(browser, dict_post)
-                fetch_comments(browser, dict_post)
-                insert(index = username, dict_post= dict_post, es=es)
+                dict_post["fetched_time"] = datetime.now()
+                insert_post(index = "posts", dict_post= dict_post, es=es)
+                fetch_comments(browser, dict_post, es=es)
 
             except RetryException:
                 sys.stderr.write(
@@ -242,7 +244,7 @@ class InsCrawler(Logging):
                 )
                 traceback.print_exc()
 
-            self.log(json.dumps(dict_post, ensure_ascii=False))
+            self.log(json.dumps(dict_post, ensure_ascii=False,default=str))
             dict_posts[browser.current_url] = dict_post
  
 

@@ -5,7 +5,8 @@ defaults = {
     "fetch_mentions": False,
     "fetch_hashtags": False,
     "fetch_details": False,
-    "elastic": False
+    "elastic": False,
+    "login": False
 }
 
 

@@ -9,7 +9,7 @@ from io import open
 from elasticsearch import Elasticsearch
 
 from inscrawler import InsCrawler
-from inscrawler.elastic import insert
+from inscrawler.elastic import insert_post
 from inscrawler.settings import override_settings
 from inscrawler.settings import prepare_override_settings
 from inscrawler.settings import settings
@@ -29,6 +29,9 @@ def usage():
 
 def get_posts_by_user(username, number, detail, debug, es=None):
     ins_crawler = InsCrawler(has_screen=debug)
+    if settings.login:
+        print(settings.login)
+        ins_crawler.login()
     return ins_crawler.get_user_posts(username, number, detail, es)
 
 

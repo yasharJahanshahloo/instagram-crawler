@@ -55,6 +55,20 @@ class Browser:
         except NoSuchElementException:
             return None
 
+    def find_by_tag(self, tag, elem=None, waittime=0):
+        obj = elem or self.driver
+
+        if waittime:
+            WebDriverWait(obj, waittime).until(
+                EC.presence_of_element_located((By.TAG_NAME, tag))
+            )
+
+        try:
+            return obj.find_element(By.TAG_NAME, tag)
+        except NoSuchElementException:
+            return None
+
+
     def find_one(self, css_selector, elem=None, waittime=0):
         obj = elem or self.driver
 
