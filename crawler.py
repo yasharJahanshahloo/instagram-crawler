@@ -30,7 +30,6 @@ def usage():
 def get_posts_by_user(username, number, detail, debug, es=None):
     ins_crawler = InsCrawler(has_screen=debug)
     if settings.login:
-        print(settings.login)
         ins_crawler.login()
     return ins_crawler.get_user_posts(username, number, detail, es)
 
@@ -48,6 +47,12 @@ def get_profile_from_script(username):
 def get_posts_by_hashtag(tag, number, debug):
     ins_crawler = InsCrawler(has_screen=debug)
     return ins_crawler.get_latest_posts_by_tag(tag, number)
+
+def get_popular_users(starting_user, debug):
+    ins_crawler = InsCrawler(has_screen=debug)
+    if settings.login:
+        ins_crawler.login()
+    return ins_crawler.get_popular_profiles(starting_user)
 
 
 def arg_required(args, fields=[]):
@@ -69,7 +74,7 @@ def output(data, filepath):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Instagram Crawler", usage=usage())
     parser.add_argument(
-        "mode", help="options: [posts, posts_full, profile, profile_script, hashtag]"
+        "mode", help="options: [posts, posts_full, profile, profile_script, hashtag, popular]"
     )
     parser.add_argument("-n", "--number", type=int, help="number of returned posts")
     parser.add_argument("-u", "--username", help="instagram's username")
@@ -105,5 +110,8 @@ if __name__ == "__main__":
         output(
             get_posts_by_hashtag(args.tag, args.number or 100, args.debug), args.output
         )
+    elif args.mode == "popular":
+        arg_required("username")
+        output(get_popular_users(args.username, args.debug), args.output)
     else:
         usage()

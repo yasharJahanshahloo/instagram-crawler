@@ -151,6 +151,24 @@ class InsCrawler(Logging):
         self.browser.get(url)
         return self._get_posts(num)
 
+    def get_popular_profiles(self, starting_user):
+        user_profile = self.get_user_profile(starting_user)
+        print("profile: ", user_profile)
+        browser = self.browser
+        followers_btn = browser.find_by_xpath(xpath = '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+        if followers_btn:
+            followers_btn.click()
+        sleep(0.3)
+        followers = browser.find(css_selector=".wo9IH")
+        while (len(followers) < instagram_int(user_profile["following_num"]) - 10):
+            print("going down...")
+            browser.scroll_down()
+            followers = browser.find(css_selector=".wo9IH")
+        for follower in followers:
+            print("++++ --> ",follower.text)
+
+
+
     def auto_like(self, tag="", maximum=1000):
         self.login()
         browser = self.browser
