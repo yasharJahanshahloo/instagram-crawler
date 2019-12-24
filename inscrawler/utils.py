@@ -6,7 +6,7 @@ from .exceptions import RetryException
 
 
 def instagram_int(string):
-    string.replace(",", "")
+    string = string.replace(",", "")
     if 'k' in string:
         string = string.replace('k', '')
         string = float(string)
