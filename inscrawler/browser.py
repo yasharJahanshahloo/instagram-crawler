@@ -109,6 +109,10 @@ class Browser:
             self.driver.execute_script("window.scrollBy(0, -%s)" % offset)
         randmized_sleep(wait)
 
+    def panel_scroll_down(self,elem, wait=0.3):
+        elem.send_keys(Keys.PAGE_DOWN)
+        randmized_sleep(wait)
+
     def js_click(self, elem):
         self.driver.execute_script("arguments[0].click();", elem)
 

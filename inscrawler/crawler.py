@@ -162,7 +162,7 @@ class InsCrawler(Logging):
         followers = browser.find(css_selector=".wo9IH")
         while (len(followers) < instagram_int(user_profile["following_num"]) - 10):
             print("going down...")
-            browser.scroll_down()
+            browser.panel_scroll_down(followers[-1])
             followers = browser.find(css_selector=".wo9IH")
         for follower in followers:
             print("++++ --> ",follower.text)
