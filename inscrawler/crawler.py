@@ -103,7 +103,10 @@ class InsCrawler(Logging):
         desc = browser.find_one(".-vDIg span")
         photo = browser.find_one("._6q-tv")
         statistics = [ele.text for ele in browser.find(".g47SY")]
-        post_num, follower_num, following_num = statistics
+        try:
+            post_num, follower_num, following_num = statistics
+        except:
+            return
         return {
             "name": name.text,
             "desc": desc.text if desc else None,
@@ -153,7 +156,7 @@ class InsCrawler(Logging):
 
     def get_popular_profiles(self, starting_user,es=None):
         user_profile = self.get_user_profile(starting_user)
-        print("profile: ", user_profile)
+        
         browser = self.browser
         followers_btn = browser.find_by_xpath(xpath = '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
         if followers_btn:
@@ -161,13 +164,30 @@ class InsCrawler(Logging):
         sleep(0.3)
         followers = browser.find(css_selector=".FPmhX")
         print("followers: ",followers)
+
+        def _is_popular(username,browser):
+            url = "%s/%s/" % (InsCrawler.URL, username)
+            browser.open_new_tab(url)
+            try:
+                statistics = [ele.text for ele in browser.find(".g47SY")]
+                post_num, follower_num, following_num = statistics
+            except ValueError:
+                print(f"error finding follow numbers of {username}")
+                return 0
+            browser.close_current_tab()
+            randmized_sleep(0.3)
+            return instagram_int(follower_num)
+
         while (len(followers) < instagram_int(user_profile["following_num"]) - 10):
-            print("going down...")
             browser.panel_scroll_down(followers[0])
             followers = browser.find(css_selector=".FPmhX")
         for follower in followers:
-            if _is_popular(follower):
-                insert_popular(username=followers.text, es=es)
+            follow_num = _is_popular(follower.text, browser)
+            limit = 15000
+            if follow_num > limit:
+                print(f"adding {follower.text} to elastic with {follow_num} followers")
+                popular_user = {"username":follower.text, "followers": follow_num}
+                insert_popular(username=popular_user, es=es)
 
 
 
@@ -343,10 +363,4 @@ class InsCrawler(Logging):
         print("Done. Fetched %s posts." % (min(len(posts), num)))
         return posts[:num]
     
-    def _is_popular(self, username):
-        browser = self.browser
-        url = "%s/%s/" % (InsCrawler.URL, username)
-        browser.open_new_tab(url)
-        statistics = [ele.text for ele in browser.find(".g47SY")]
-        post_num, follower_num, following_num = statistics
-        return instagram_int(follower_num) >= 15000
+    
