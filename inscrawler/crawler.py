@@ -161,7 +161,8 @@ class InsCrawler(Logging):
 
         browser = self.browser
         followers_btn = browser.find_by_xpath(
-            xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+            xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a') #by followers
+            # xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
         if followers_btn:
             followers_btn.click()
         sleep(0.3)
@@ -185,21 +186,25 @@ class InsCrawler(Logging):
             browser.panel_scroll_down(followers[0])
             followers = browser.find(css_selector=".FPmhX")
 
-        for follower in followers:
-            randmized_sleep(0.2)
-            try:
-                follow_num = _is_popular(follower.text, browser)
-            except Exception as exp:
-                print(exp)
-            
+        def check_followers(start, followers, browser):
             limit = 15000
-            if follow_num > limit:
+            for i in range(start, len(followers)):
+                randmized_sleep(0.2)
+                try:
+                    follow_num = _is_popular(followers[i].text, browser)
+                except Exception as exp:
+                    print("exeption in checking : " , exp)
+                    followers = browser.find(css_selector=".FPmhX")
+                    check_followers(i, followers, browser)
+
+                if follow_num > limit:
                 print(
                     f"adding {follower.text} to elastic with {follow_num} followers")
                 popular_user = {"username": follower.text,
                                 "followers": follow_num,
                                 "is_checked": False}
                 insert_popular(username=popular_user, es=es)
+            
 
     def auto_like(self, tag="", maximum=1000):
         self.login()
