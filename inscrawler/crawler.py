@@ -26,7 +26,7 @@ from .fetch import fetch_details
 from .utils import instagram_int
 from .utils import randmized_sleep
 from .utils import retry
-from .elastic import insert_post,insert_popular
+from .elastic import insert_post, insert_popular
 
 
 class Logging(object):
@@ -36,7 +36,8 @@ class Logging(object):
         try:
             timestamp = int(time.time())
             self.cleanup(timestamp)
-            self.logger = open("/tmp/%s-%s.log" % (Logging.PREFIX, timestamp), "w")
+            self.logger = open("/tmp/%s-%s.log" %
+                               (Logging.PREFIX, timestamp), "w")
             self.log_disable = False
         except Exception:
             self.log_disable = True
@@ -121,7 +122,8 @@ class InsCrawler(Logging):
         url = "%s/%s/" % (InsCrawler.URL, username)
         browser.get(url)
         source = browser.driver.page_source
-        p = re.compile(r"window._sharedData = (?P<json>.*?);</script>", re.DOTALL)
+        p = re.compile(
+            r"window._sharedData = (?P<json>.*?);</script>", re.DOTALL)
         json_data = re.search(p, source).group("json")
         data = json.loads(json_data)
 
@@ -154,18 +156,18 @@ class InsCrawler(Logging):
         self.browser.get(url)
         return self._get_posts(num)
 
-    def get_popular_profiles(self, starting_user,es=None):
+    def get_popular_profiles(self, starting_user, es=None):
         user_profile = self.get_user_profile(starting_user)
-        
+
         browser = self.browser
-        followers_btn = browser.find_by_xpath(xpath = '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+        followers_btn = browser.find_by_xpath(
+            xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
         if followers_btn:
             followers_btn.click()
         sleep(0.3)
         followers = browser.find(css_selector=".FPmhX")
-        print("followers: ",followers)
 
-        def _is_popular(username,browser):
+        def _is_popular(username, browser):
             url = "%s/%s/" % (InsCrawler.URL, username)
             browser.open_new_tab(url)
             try:
@@ -178,18 +180,26 @@ class InsCrawler(Logging):
             randmized_sleep(0.3)
             return instagram_int(follower_num)
 
+        print("<<scrolling down>>")
         while (len(followers) < instagram_int(user_profile["following_num"]) - 10):
             browser.panel_scroll_down(followers[0])
             followers = browser.find(css_selector=".FPmhX")
+
         for follower in followers:
-            follow_num = _is_popular(follower.text, browser)
+            randmized_sleep(0.2)
+            try:
+                follow_num = _is_popular(follower.text, browser)
+            except Exception as exp:
+                print(exp)
+            
             limit = 15000
             if follow_num > limit:
-                print(f"adding {follower.text} to elastic with {follow_num} followers")
-                popular_user = {"username":follower.text, "followers": follow_num}
+                print(
+                    f"adding {follower.text} to elastic with {follow_num} followers")
+                popular_user = {"username": follower.text,
+                                "followers": follow_num,
+                                "is_checked": False}
                 insert_popular(username=popular_user, es=es)
-
-
 
     def auto_like(self, tag="", maximum=1000):
         self.login()
@@ -204,7 +214,8 @@ class InsCrawler(Logging):
         ele_post.click()
 
         for _ in range(maximum):
-            heart = browser.find_one(".dCJp8 .glyphsSpriteHeart__outline__24__grey_9")
+            heart = browser.find_one(
+                ".dCJp8 .glyphsSpriteHeart__outline__24__grey_9")
             if heart:
                 heart.click()
                 randmized_sleep(2)
@@ -250,7 +261,8 @@ class InsCrawler(Logging):
 
                 # Fetching datetime and url as key
                 username = browser.find_one('.BrX75')
-                username = browser.find_one(elem=username, css_selector=".FPmhX" ).text
+                username = browser.find_one(
+                    elem=username, css_selector=".FPmhX").text
                 ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
                 cur_key = ele_a_datetime.get_attribute("href")
                 dict_post["key"] = cur_key
@@ -260,33 +272,32 @@ class InsCrawler(Logging):
                 fetch_likers(browser, dict_post)
                 fetch_caption(browser, dict_post)
                 dict_post["fetched_time"] = datetime.now()
-                insert_post(index = "posts", dict_post= dict_post, es=es)
+                insert_post(index="posts", dict_post=dict_post, es=es)
                 fetch_comments(browser, dict_post, es=es)
 
             except RetryException:
                 sys.stderr.write(
-                    "\x1b[1;31m"
-                    + "Failed to fetch the post: "
-                    + cur_key or 'URL not fetched'
-                    + "\x1b[0m"
-                    + "\n"
+                    "\x1b[1;31m" +
+                    "Failed to fetch the post: " +
+                    cur_key or 'URL not fetched' +
+                    "\x1b[0m" +
+                    "\n"
                 )
                 traceback.print_exc()
                 # break TODO
 
             except Exception:
                 sys.stderr.write(
-                    "\x1b[1;31m"
-                    + "Failed to fetch the post: "
-                    + cur_key if isinstance(cur_key, str) else 'URL not fetched'
-                                                               + "\x1b[0m"
-                                                               + "\n************\n"
+                    "\x1b[1;31m" +
+                    "Failed to fetch the post: " +
+                    cur_key if isinstance(cur_key, str) else 'URL not fetched' +
+                                                               "\x1b[0m" +
+                                                               "\n************\n"
                 )
                 traceback.print_exc()
 
-            self.log(json.dumps(dict_post, ensure_ascii=False,default=str))
+            self.log(json.dumps(dict_post, ensure_ascii=False, default=str))
             dict_posts[browser.current_url] = dict_post
- 
 
             pbar.update(1)
             left_arrow = browser.find_one(".HBoOv")
@@ -362,5 +373,3 @@ class InsCrawler(Logging):
         pbar.close()
         print("Done. Fetched %s posts." % (min(len(posts), num)))
         return posts[:num]
-    
-    
