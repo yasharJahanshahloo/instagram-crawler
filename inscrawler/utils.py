@@ -11,6 +11,10 @@ def instagram_int(string):
         string = string.replace('k', '')
         string = float(string)
         string *= 1000
+    elif 'm' in string:
+        string = string.replace('m', '')
+        string = float(string)
+        string *= 1000000
     else:
         string = float(string) 
     return int(string)

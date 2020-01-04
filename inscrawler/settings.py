@@ -6,7 +6,8 @@ defaults = {
     "fetch_hashtags": False,
     "fetch_details": False,
     "elastic": False,
-    "login": False
+    "login": False,
+    "test": False
 }
 
 

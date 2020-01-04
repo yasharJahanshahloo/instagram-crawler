@@ -26,7 +26,7 @@ from .fetch import fetch_details
 from .utils import instagram_int
 from .utils import randmized_sleep
 from .utils import retry
-from .elastic import insert_post, insert_popular
+from .elastic import *
 
 
 class Logging(object):
@@ -156,56 +156,70 @@ class InsCrawler(Logging):
         self.browser.get(url)
         return self._get_posts(num)
 
-    def get_popular_profiles(self, starting_user, es=None):
-        user_profile = self.get_user_profile(starting_user)
+    def check_popular_profiles_elastic(self, hits):
 
-        browser = self.browser
-        followers_btn = browser.find_by_xpath(
-            # xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a') #by followers
-            xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
-        if followers_btn:
-            followers_btn.click()
-        sleep(0.3)
-        followers = browser.find(css_selector=".FPmhX")
+        def get_popular_profiles(self, starting_user):
+            user_profile = self.get_user_profile(starting_user)
 
-        def _is_popular(username, browser):
-            url = "%s/%s/" % (InsCrawler.URL, username)
-            browser.open_new_tab(url)
-            try:
-                statistics = [ele.text for ele in browser.find(".g47SY")]
-                post_num, follower_num, following_num = statistics
-            except ValueError:
-                print(f"error finding follow numbers of {username}")
-                return 0
-            browser.close_current_tab()
-            randmized_sleep(0.3)
-            return instagram_int(follower_num)
-
-        print("<<scrolling down>>")
-        while len(followers) < instagram_int(user_profile["following_num"]) - 10:
-            browser.panel_scroll_down(followers[0])
+            browser = self.browser
+            followers_btn = browser.find_by_xpath(
+                # xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a') #by followers
+                xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
+            if followers_btn:
+                followers_btn.click()
+            sleep(0.3)
             followers = browser.find(css_selector=".FPmhX")
 
-        def check_followers(start, followers, browser):
-            limit = 15000
-            for i in range(start, len(followers)):
-                randmized_sleep(0.2)
+            def _is_popular(username, browser):
+                url = "%s/%s/" % (InsCrawler.URL, username)
+                browser.open_new_tab(url)
                 try:
-                    follow_num = _is_popular(followers[i].text, browser)
-                except Exception as exp:
-                    print("exeption in checking : ", exp)
-                    followers = browser.find(css_selector=".FPmhX")
-                    check_followers(i, followers, browser)
+                    statistics = [ele.text for ele in browser.find(".g47SY")]
+                    post_num, follower_num, following_num = statistics
+                except ValueError:
+                    print(f"error finding follow numbers of {username}")
+                    return 0
+                browser.close_current_tab()
+                randmized_sleep(0.3)
+                return instagram_int(follower_num)
 
-                if follow_num > limit:
-                    print(
-                        f"adding {followers[i].text} to elastic with {follow_num} followers")
-                    popular_user = {"username": followers[i].text,
-                                    "followers": follow_num,
-                                    "is_checked": False}
-                    insert_popular(username=popular_user, es=es)
+            print("<<scrolling down>>")
+            offset = 100000000 if settings.test else 10
+            while len(followers) < instagram_int(user_profile["following_num"]) - offset:
+                browser.panel_scroll_down(followers[0])
+                followers = browser.find(css_selector=".FPmhX")
 
-        check_followers(0, followers, browser)
+            def check_followers(start, followers, browser):
+                limit = 15000
+                for i in range(start, len(followers)):
+                    randmized_sleep(0.2)
+                    try:
+                        follow_num = _is_popular(followers[i].text, browser)
+                    except Exception as exp:
+                        print("exeption in checking : ", exp)
+                        followers = browser.find(css_selector=".FPmhX")
+                        check_followers(i, followers, browser)
+
+                    if follow_num > limit:
+                        print(
+                            f"adding {followers[i].text} to elastic with {follow_num} followers")
+                        popular_user = {"username": followers[i].text,
+                                        "followers": follow_num,
+                                        "is_checked": False}
+                        insert_popular(username=popular_user["username"], followers=popular_user["followers"],
+                                       checked=popular_user["is_checked"])
+
+            check_followers(0, followers, browser)
+
+        for hit in hits:
+            try:
+                print(f"*** checking profile: {hit.username}")
+                get_popular_profiles(self, starting_user=hit.username)
+                update_checked_status(hit.username)
+            except Exception as exp:
+                print(f"error checking {hit.username}")
+                print(exp)
+                continue
 
     def auto_like(self, tag="", maximum=1000):
         self.login()

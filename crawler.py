@@ -5,11 +5,13 @@ import argparse
 import json
 import sys
 from io import open
+from threading import Thread
 
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import connections
 
 from inscrawler import InsCrawler
-from inscrawler.elastic import insert_post
+from inscrawler.elastic import get_unchecked_profiles
 from inscrawler.settings import override_settings
 from inscrawler.settings import prepare_override_settings
 from inscrawler.settings import settings
@@ -48,11 +50,15 @@ def get_posts_by_hashtag(tag, number, debug):
     ins_crawler = InsCrawler(has_screen=debug)
     return ins_crawler.get_latest_posts_by_tag(tag, number)
 
-def get_popular_users(starting_user, debug,es=None):
-    ins_crawler = InsCrawler(has_screen=debug)
-    if settings.login:
-        ins_crawler.login()
-    return ins_crawler.get_popular_profiles(starting_user,es=es)
+
+def get_popular_users(starting_user, debug):
+    number_of_threads = 4
+    users_list = get_unchecked_profiles(number_of_threads)
+    for hits in users_list:
+        ins_crawler = InsCrawler(has_screen=debug)
+        if settings.login:
+            ins_crawler.login()
+        Thread(target=ins_crawler.check_popular_profiles_elastic, args=(hits,)).start()
 
 
 def arg_required(args, fields=[]):
@@ -88,14 +94,16 @@ if __name__ == "__main__":
 
     override_settings(args)
 
-    
-    es = Elasticsearch([{'host': 'localhost', 'port': 9200}]) if settings.elastic else None
+    if settings.elastic:
+        connections.create_connection(hosts=['localhost'], timeout=20)
+
+    es = None  # TODO refactor functions which need es
 
     if args.mode in ["posts", "posts_full"]:
         arg_required("username")
         output(
             get_posts_by_user(
-                args.username, args.number, args.mode == "posts_full", args.debug,es
+                args.username, args.number, args.mode == "posts_full", args.debug, es
             ),
             args.output,
         )
@@ -111,7 +119,7 @@ if __name__ == "__main__":
             get_posts_by_hashtag(args.tag, args.number or 100, args.debug), args.output
         )
     elif args.mode == "popular":
-        arg_required("username")
-        output(get_popular_users(args.username, args.debug, es=es), args.output)
+        # arg_required("username")
+        output(get_popular_users(args.username, args.debug), args.output)
     else:
         usage()
