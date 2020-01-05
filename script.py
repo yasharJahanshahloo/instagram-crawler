@@ -1,8 +1,8 @@
-from elasticsearch_dsl import connections
+from elasticsearch_dsl import connections,Search
+from datetime import datetime
 
-from inscrawler.elastic import insert_popular,Popular
+from inscrawler.elastic import *
 
 connections.create_connection(hosts=['localhost'], timeout=20)
-Popular.init()
-insert_popular(username="amir_mahdi_jule", followers=2500000, checked=False)
-
+Post.init()
+Comment.init()

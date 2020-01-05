@@ -5,24 +5,85 @@ from elasticsearch_dsl import Document, Date, Integer, Nested, Boolean, \
     analyzer, InnerDoc, Completion, Keyword, Text, connections, Search
 
 
-def insert_post(index='posts', dict_post={}, es=None):
+class Post(Document):
+    username = Text(
+        fields={'raw': Keyword()}
+    )
+    key = Text(
+        fields={'raw': Keyword()}
+    )
+    img_urls = Text(
+        fields={'raw': Keyword()}
+    )
+    hashtags = Text(
+        fields={'raw': Keyword()}
+    )
+    mentions = Text(
+        fields={'raw': Keyword()}
+    )
+    location = Text(
+        fields={'raw': Keyword()}
+    )
+    caption = Text()
+    added_at = Date()
+    published_at = Date()
+    last_update = Date()
+
+    class Index:
+        name = 'posts'
+
+    def save(self, **kwargs):
+        self.added_at = datetime.now()
+        self.last_update = datetime.now()
+        return super().save(**kwargs)
+
+
+def insert_post(dict_post):
     if not settings.elastic:
         return
-    if not es:
-        es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
 
-    res = es.index(index=index, doc_type='_doc', body=dict_post, id=dict_post["key"])
-    # print(res)
+    doc = Post(username=dict_post.get("username", "unknown"), key=dict_post["key"], img_urls=dict_post["img_urls"],
+               hashtags=dict_post.get("hashtags", []), mentions=dict_post.get("mentions", []), location=dict_post.get("location", []),
+               caption=dict_post.get("caption", ""), published_at=dict_post.get("published_at", ""))
+    doc.meta.id = dict_post["key"]
+    doc.save()
 
 
-def insert_comment(index='comments', comment={}, es=None):
+class Comment(Document):
+    post_id = Text(
+        fields={'raw': Keyword()}
+    )
+    author = Text(
+        fields={'raw': Keyword()}
+    )
+    comment = Text(
+        fields={'raw': Keyword()}
+    )
+    hashtags = Text(
+        fields={'raw': Keyword()}
+    )
+    mentions = Text(
+        fields={'raw': Keyword()}
+    )
+    added_at = Date()
+    published_at = Date()
+
+    class Index:
+        name = 'comments'
+
+    def save(self, **kwargs):
+        self.added_at = datetime.now()
+        return super().save(**kwargs)
+
+
+def insert_comment(comment_obj):
     if not settings.elastic:
         return
-    if not es:
-        es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
 
-    res = es.index(index=index, doc_type='_doc', body=comment)
-    print(res)
+    doc = Comment(post_id=comment_obj["post_id"], author=comment_obj["author"], comment=comment_obj["comment"],
+                  hashtags=comment_obj.get("hashtags", []), mentions=comment_obj.get("mentions", []),
+                  published_at=comment_obj.get("published_at", ""))
+    doc.save()
 
 
 class Popular(Document):
@@ -31,6 +92,7 @@ class Popular(Document):
     )
     followers = Integer()
     added_at = Date()
+    last_update = Date()
     checked = Boolean()
 
     class Index:

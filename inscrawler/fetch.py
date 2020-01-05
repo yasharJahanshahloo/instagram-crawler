@@ -39,7 +39,7 @@ def fetch_hashtags(raw_test, dict_obj):
 def fetch_datetime(browser, dict_post):
     ele_datetime = browser.find_one(".eo2As .c-Yi7 ._1o9PC")
     datetime = ele_datetime.get_attribute("datetime")
-    dict_post["datetime"] = datetime
+    dict_post["published_at"] = datetime
 
 
 def fetch_imgs(browser, dict_post):
@@ -131,7 +131,7 @@ def fetch_caption(browser, dict_post):
         fetch_hashtags(dict_post.get("caption", ""), dict_post)
 
 
-def fetch_comments(browser, dict_post, for_tag=False, es = None):
+def fetch_comments(browser, dict_post, for_tag=False, es=None):
     if not settings.fetch_comments:
         return
     if not for_tag:
@@ -157,7 +157,6 @@ def fetch_comments(browser, dict_post, for_tag=False, es = None):
     for els_comment in ele_comments[1:]:
         author = browser.find_one(".FPmhX", els_comment).text
         time = browser.find_by_tag("time", els_comment).get_attribute("datetime")
-        print("comment time is :  ", time)
 
         temp_element = browser.find("span", els_comment)
 
@@ -166,17 +165,17 @@ def fetch_comments(browser, dict_post, for_tag=False, es = None):
             if element.text not in ['Verified', '']:
                 comment = element.text
 
-        comment_obj = {"author": author, 
-                       "comment": comment, 
-                       "time":time,
-                       "fetched_time":datetime.now(),
-                       "post_id":dict_post["key"]}
+        comment_obj = {"author": author,
+                       "comment": comment,
+                       "published_at": time,
+                       "added_at": datetime.now(),
+                       "post_id": dict_post["key"]}
 
-        insert_comment(index="comments", comment=comment_obj, es=es)
-        # fetch_mentions(comment, comment_obj) #TODO uncomment!
-        # fetch_hashtags(comment, comment_obj)
+        fetch_mentions(comment, comment_obj)  # TODO uncomment!
+        fetch_hashtags(comment, comment_obj)
+        insert_comment(comment_obj)
 
-        comments.append(comment_obj)
+        comments.append(comment_obj)  # TODO these parts can be omitted
     if comments:
         dict_post["comments"] = comments
 

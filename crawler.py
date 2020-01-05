@@ -7,7 +7,6 @@ import sys
 from io import open
 from threading import Thread
 
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import connections
 
 from inscrawler import InsCrawler
@@ -29,11 +28,11 @@ def usage():
     """
 
 
-def get_posts_by_user(username, number, detail, debug, es=None):
+def get_posts_by_user(username, number, detail, debug):
     ins_crawler = InsCrawler(has_screen=debug)
     if settings.login:
         ins_crawler.login()
-    return ins_crawler.get_user_posts(username, number, detail, es)
+    return ins_crawler.get_user_posts(username, number, detail)
 
 
 def get_profile(username):
@@ -97,13 +96,11 @@ if __name__ == "__main__":
     if settings.elastic:
         connections.create_connection(hosts=['localhost'], timeout=20)
 
-    es = None  # TODO refactor functions which need es
-
     if args.mode in ["posts", "posts_full"]:
         arg_required("username")
         output(
             get_posts_by_user(
-                args.username, args.number, args.mode == "posts_full", args.debug, es
+                args.username, args.number, args.mode == "posts_full", args.debug
             ),
             args.output,
         )

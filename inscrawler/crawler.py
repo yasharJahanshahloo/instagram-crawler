@@ -139,7 +139,7 @@ class InsCrawler(Logging):
             "website": user_data["external_url"],
         }
 
-    def get_user_posts(self, username, number=None, detail=False, es=None):
+    def get_user_posts(self, username, number=None, detail=False):
         user_profile = self.get_user_profile(username)
         if not number:
             number = instagram_int(user_profile["post_num"])
@@ -147,7 +147,7 @@ class InsCrawler(Logging):
         self._dismiss_login_prompt()
 
         if detail:
-            return self._get_posts_full(number, es)
+            return self._get_posts_full(number)
         else:
             return self._get_posts(number)
 
@@ -247,7 +247,7 @@ class InsCrawler(Logging):
             else:
                 break
 
-    def _get_posts_full(self, num, es=None):
+    def _get_posts_full(self, num):
         @retry()
         def check_next_post(cur_key):
             ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
@@ -283,6 +283,7 @@ class InsCrawler(Logging):
                 username = browser.find_one('.BrX75')
                 username = browser.find_one(
                     elem=username, css_selector=".FPmhX").text
+                dict_post["username"] = username
                 ele_a_datetime = browser.find_one(".eo2As .c-Yi7")
                 cur_key = ele_a_datetime.get_attribute("href")
                 dict_post["key"] = cur_key
@@ -291,9 +292,9 @@ class InsCrawler(Logging):
                 fetch_likes_plays(browser, dict_post)
                 fetch_likers(browser, dict_post)
                 fetch_caption(browser, dict_post)
-                dict_post["fetched_time"] = datetime.now()
-                insert_post(index="posts", dict_post=dict_post, es=es)
-                fetch_comments(browser, dict_post, es=es)
+                dict_post["added_at"] = datetime.now()
+                insert_post(dict_post)
+                fetch_comments(browser, dict_post)
 
             except RetryException:
                 sys.stderr.write(
