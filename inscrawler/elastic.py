@@ -129,4 +129,4 @@ def get_unchecked_profiles(number_of_threads):
 
 
 def update_checked_status(username):
-    Popular.get(id="username").update(checked=True)
+    Popular.get(id=username).update(checked=True)
