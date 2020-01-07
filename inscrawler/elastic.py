@@ -1,3 +1,5 @@
+import random
+
 from elasticsearch import Elasticsearch
 from .settings import settings
 from datetime import datetime
@@ -43,7 +45,8 @@ def insert_post(dict_post):
         return
 
     doc = Post(username=dict_post.get("username", "unknown"), key=dict_post["key"], img_urls=dict_post["img_urls"],
-               hashtags=dict_post.get("hashtags", []), mentions=dict_post.get("mentions", []), location=dict_post.get("location", []),
+               hashtags=dict_post.get("hashtags", []), mentions=dict_post.get("mentions", []),
+               location=dict_post.get("location", []),
                caption=dict_post.get("caption", ""), published_at=dict_post.get("published_at", ""))
     doc.meta.id = dict_post["key"]
     doc.save()
@@ -83,6 +86,9 @@ def insert_comment(comment_obj):
     doc = Comment(post_id=comment_obj["post_id"], author=comment_obj["author"], comment=comment_obj["comment"],
                   hashtags=comment_obj.get("hashtags", []), mentions=comment_obj.get("mentions", []),
                   published_at=comment_obj.get("published_at", ""))
+    doc.meta.id = comment_obj["post_id"] + '|' \
+                  + comment_obj["author"] + '|' \
+                  + comment_obj.get("published_at", random.randint(0, 100))
     doc.save()
 
 

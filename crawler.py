@@ -29,10 +29,13 @@ def usage():
 
 
 def get_posts_by_user(username, number, detail, debug):
-    ins_crawler = InsCrawler(has_screen=debug)
-    if settings.login:
-        ins_crawler.login()
-    return ins_crawler.get_user_posts(username, number, detail)
+    if username:
+        ins_crawler = InsCrawler(has_screen=debug)
+        if settings.login:
+            ins_crawler.login()
+        return ins_crawler.get_user_posts(username, number, detail)
+    else:
+        pass
 
 
 def get_profile(username):

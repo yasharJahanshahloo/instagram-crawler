@@ -180,12 +180,13 @@ class InsCrawler(Logging):
                     print(f"error finding follow numbers of {username}")
                     return 0
                 browser.close_current_tab()
-                randmized_sleep(0.3)
+                randmized_sleep(1.3)
                 return instagram_int(follower_num)
 
             print("<<scrolling down>>")
             offset = 100000000 if settings.test else 10
-            while len(followers) < instagram_int(user_profile["following_num"]) - offset:
+            limit = 500
+            while len(followers) < instagram_int(user_profile["following_num"]) - offset and len(followers) < limit:
                 browser.panel_scroll_down(followers[0])
                 followers = browser.find(css_selector=".FPmhX")
 
