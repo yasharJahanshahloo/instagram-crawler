@@ -215,7 +215,6 @@ class InsCrawler(Logging):
         while len(followers) < instagram_int(user_profile["following_num"]) - offset and len(followers) < limit:
             browser.panel_scroll_down(followers[-1])
             followers = browser.find(css_selector=".FPmhX")
-            print("why?!")
 
         self.add_targets(0, followers)
 
