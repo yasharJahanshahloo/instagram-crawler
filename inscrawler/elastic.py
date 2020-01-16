@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from .settings import settings
 from datetime import datetime
 from elasticsearch_dsl import Document, Date, Integer, Nested, Boolean, \
-    analyzer, InnerDoc, Completion, Keyword, Text, connections, Search
+    analyzer, InnerDoc, Completion, Keyword, Text, connections, Search, MultiSearch, Q
 
 
 class Post(Document):
@@ -174,3 +174,29 @@ def get_unchecked_targets(number_of_threads):
     hits_list.append(s)
 
     return hits_list
+
+
+def get_usernames_for_crawl():
+    ms = MultiSearch(index='populars')
+    q = Q({
+            "bool": {
+                "must_not": {
+                    "exists": {
+                        "field": "last_update"
+                    }
+                }
+            }
+    })
+    never_updated = Search().query(q)
+    total = never_updated.count()
+    never_updated = never_updated[0:total]
+    old_updated = Search().query('range', last_update={"lte": "now-2d"})
+    total = old_updated.count()
+    old_updated = old_updated[0:total]
+    ms = ms.add(never_updated)
+    ms = ms.add(old_updated)
+    responses = ms.execute()
+    for res in responses:
+        for hit in res:
+            yield (hit.username)
+

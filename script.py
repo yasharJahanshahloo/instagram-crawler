@@ -14,3 +14,7 @@ connections.create_connection(hosts=['localhost'], timeout=20)
 
 Target.init()
 # Popular.get(id="1").delete()
+
+# results = get_usernames_for_crawl()
+# for result in results:
+#     print(result)
