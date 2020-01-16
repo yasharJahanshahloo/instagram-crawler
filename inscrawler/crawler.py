@@ -159,14 +159,13 @@ class InsCrawler(Logging):
     def get_follower_num(self, username):
         browser = self.browser
         url = "%s/%s/" % (InsCrawler.URL, username)
-        browser.open_new_tab(url)
+        browser.get(url)
         try:
             statistics = [ele.text for ele in browser.find(".g47SY")]
             post_num, follower_num, following_num = statistics
         except ValueError:
             print(f"error finding follow numbers of {username}")
             return 0
-        browser.close_current_tab()
         randmized_sleep(1.3)
         return instagram_int(follower_num)
 
@@ -214,8 +213,9 @@ class InsCrawler(Logging):
         offset = 100000000 if settings.test else 10
         limit = 500
         while len(followers) < instagram_int(user_profile["following_num"]) - offset and len(followers) < limit:
-            browser.panel_scroll_down(followers[0])
+            browser.panel_scroll_down(followers[-1])
             followers = browser.find(css_selector=".FPmhX")
+            print("why?!")
 
         self.add_targets(0, followers)
 

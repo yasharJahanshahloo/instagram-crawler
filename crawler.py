@@ -53,7 +53,9 @@ def get_posts_by_hashtag(tag, number, debug):
     return ins_crawler.get_latest_posts_by_tag(tag, number)
 
 
-def get_popular_users(starting_user, debug, threads_number=4):
+def get_popular_users(starting_user, debug, threads_number):
+    if not threads_number:
+        threads_number = 4
     users_list = get_unchecked_profiles(threads_number)
     for hits in users_list:
         ins_crawler = InsCrawler(has_screen=debug)
@@ -62,7 +64,9 @@ def get_popular_users(starting_user, debug, threads_number=4):
         Thread(target=ins_crawler.check_popular_profiles_elastic, args=(hits,)).start()
 
 
-def check_targets(debug, threads_number=4):
+def check_targets(debug, threads_number):
+    if not threads_number:
+        threads_number = 4
     targets_list = get_unchecked_targets(threads_number)
     for hits in targets_list:
         ins_crawler = InsCrawler(has_screen=debug)
