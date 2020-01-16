@@ -125,6 +125,9 @@ class Browser:
 
         self.driver.switch_to.window(self.driver.window_handles[0])
 
+    def get_page_source(self):
+        return self.driver.page_source
+
     def __del__(self):
         try:
             self.driver.quit()

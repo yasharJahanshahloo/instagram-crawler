@@ -46,12 +46,20 @@ def fetch_imgs(browser, dict_post):
     img_urls = list()
     while True:
         ele_imgs = browser.find("._97aPb img", waittime=10)
+        try:
+            if isinstance(ele_imgs, list):
+                for ele_img in ele_imgs:
+                    img_urls.append(ele_img.get_attribute("src"))
+            else:
+                break
+        except Exception as exp:
+            print(f"exception: {exp} for {dict_post['key']}")
+            with open('error.log','w') as f:
+                f.writelines(browser.get_page_source())
+                f.write("\n\n")
+                f.write(f"element {ele_img}   elements: {ele_imgs}\nlist:{img_urls}")
 
-        if isinstance(ele_imgs, list):
-            for ele_img in ele_imgs:
-                img_urls.append(ele_img.get_attribute("src"))
-        else:
-            break
+
 
         next_photo_btn = browser.find_one("._6CZji .coreSpriteRightChevron")
 

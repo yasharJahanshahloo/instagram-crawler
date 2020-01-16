@@ -156,67 +156,88 @@ class InsCrawler(Logging):
         self.browser.get(url)
         return self._get_posts(num)
 
-    def check_popular_profiles_elastic(self, hits):
+    def get_follower_num(self, username):
+        browser = self.browser
+        url = "%s/%s/" % (InsCrawler.URL, username)
+        browser.open_new_tab(url)
+        try:
+            statistics = [ele.text for ele in browser.find(".g47SY")]
+            post_num, follower_num, following_num = statistics
+        except ValueError:
+            print(f"error finding follow numbers of {username}")
+            return 0
+        browser.close_current_tab()
+        randmized_sleep(1.3)
+        return instagram_int(follower_num)
 
-        def get_popular_profiles(self, starting_user):
-            user_profile = self.get_user_profile(starting_user)
+    def check_target_is_popular(self, username):
+        LIMIT = 15000
+        try:
+            follow_num = self.get_follower_num(username)
+        except Exception as exp:
+            print("exeption in checking : ", exp)
+            return
+        if follow_num > LIMIT:
+            print(
+                f"adding {username} to elastic with {follow_num} followers")
+            res = Popular.get(id=username, ignore=404)
+            if not res:
+                insert_popular(username=username, followers=follow_num, checked=False)
 
-            browser = self.browser
-            followers_btn = browser.find_by_xpath(
-                # xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a') #by followers
-                xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
-            if followers_btn:
-                followers_btn.click()
-            sleep(0.3)
+    def add_targets(self, start, followers):
+        browser = self.browser
+        for i in range(start, len(followers)):
+            try:
+                username = followers[i].text
+                print(f"adding {username} to targets")
+                res = Target.get(id=username, ignore=404)
+                if not res:
+                    insert_target(username=followers[i].text)
+            except Exception as exp:
+                print("exception in followers checking for targeting: ", exp)
+                followers = browser.find(css_selector=".FPmhX")
+                self.add_targets(i, followers)
+
+    def get_popular_profiles(self, username):
+        user_profile = self.get_user_profile(username)
+
+        browser = self.browser
+        followers_btn = browser.find_by_xpath(
+            # xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a') #by followers
+            xpath='//*[@id="react-root"]/section/main/div/header/section/ul/li[3]/a')
+        if followers_btn:
+            followers_btn.click()
+        sleep(0.3)
+        followers = browser.find(css_selector=".FPmhX")
+
+        print("<<scrolling down>>")
+        offset = 100000000 if settings.test else 10
+        limit = 500
+        while len(followers) < instagram_int(user_profile["following_num"]) - offset and len(followers) < limit:
+            browser.panel_scroll_down(followers[0])
             followers = browser.find(css_selector=".FPmhX")
 
-            def _is_popular(username, browser):
-                url = "%s/%s/" % (InsCrawler.URL, username)
-                browser.open_new_tab(url)
-                try:
-                    statistics = [ele.text for ele in browser.find(".g47SY")]
-                    post_num, follower_num, following_num = statistics
-                except ValueError:
-                    print(f"error finding follow numbers of {username}")
-                    return 0
-                browser.close_current_tab()
-                randmized_sleep(1.3)
-                return instagram_int(follower_num)
+        self.add_targets(0, followers)
 
-            print("<<scrolling down>>")
-            offset = 100000000 if settings.test else 10
-            limit = 500
-            while len(followers) < instagram_int(user_profile["following_num"]) - offset and len(followers) < limit:
-                browser.panel_scroll_down(followers[0])
-                followers = browser.find(css_selector=".FPmhX")
-
-            def check_followers(start, followers, browser):
-                limit = 15000
-                for i in range(start, len(followers)):
-                    randmized_sleep(0.2)
-                    try:
-                        follow_num = _is_popular(followers[i].text, browser)
-                    except Exception as exp:
-                        print("exeption in checking : ", exp)
-                        followers = browser.find(css_selector=".FPmhX")
-                        check_followers(i, followers, browser)
-
-                    if follow_num > limit:
-                        print(
-                            f"adding {followers[i].text} to elastic with {follow_num} followers")
-                        popular_user = {"username": followers[i].text,
-                                        "followers": follow_num,
-                                        "is_checked": False}
-                        insert_popular(username=popular_user["username"], followers=popular_user["followers"],
-                                       checked=popular_user["is_checked"])
-
-            check_followers(0, followers, browser)
+    def check_popular_profiles_elastic(self, hits):
 
         for hit in hits:
             try:
-                print(f"*** checking profile: {hit.username}")
-                get_popular_profiles(self, starting_user=hit.username)
-                update_checked_status(hit.username)
+                print(f"*** adding targets from: {hit.username}")
+                self.get_popular_profiles(hit.username)
+                update_checked_status(hit.username, Popular)
+            except Exception as exp:
+                print(f"error targeting from: {hit.username}")
+                print(exp)
+                continue
+
+    def check_targets(self, hits):
+
+        for hit in hits:
+            try:
+                print(f"*** checking target:: {hit.username}")
+                self.check_target_is_popular(hit.username)
+                update_checked_status(hit.username, Target)
             except Exception as exp:
                 print(f"error checking {hit.username}")
                 print(exp)

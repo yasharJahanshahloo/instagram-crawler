@@ -10,7 +10,7 @@ from threading import Thread
 from elasticsearch_dsl import connections
 
 from inscrawler import InsCrawler
-from inscrawler.elastic import get_unchecked_profiles
+from inscrawler.elastic import get_unchecked_profiles, get_unchecked_targets
 from inscrawler.settings import override_settings
 from inscrawler.settings import prepare_override_settings
 from inscrawler.settings import settings
@@ -53,14 +53,22 @@ def get_posts_by_hashtag(tag, number, debug):
     return ins_crawler.get_latest_posts_by_tag(tag, number)
 
 
-def get_popular_users(starting_user, debug):
-    number_of_threads = 4
-    users_list = get_unchecked_profiles(number_of_threads)
+def get_popular_users(starting_user, debug, threads_number=4):
+    users_list = get_unchecked_profiles(threads_number)
     for hits in users_list:
         ins_crawler = InsCrawler(has_screen=debug)
         if settings.login:
             ins_crawler.login()
         Thread(target=ins_crawler.check_popular_profiles_elastic, args=(hits,)).start()
+
+
+def check_targets(debug, threads_number=4):
+    targets_list = get_unchecked_targets(threads_number)
+    for hits in targets_list:
+        ins_crawler = InsCrawler(has_screen=debug)
+        if settings.login:
+            ins_crawler.login()
+        Thread(target=ins_crawler.check_targets, args=(hits,)).start()
 
 
 def arg_required(args, fields=[]):
@@ -82,9 +90,10 @@ def output(data, filepath):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Instagram Crawler", usage=usage())
     parser.add_argument(
-        "mode", help="options: [posts, posts_full, profile, profile_script, hashtag, popular]"
+        "mode", help="options: [posts, posts_full, profile, profile_script, hashtag, popular, target]"
     )
     parser.add_argument("-n", "--number", type=int, help="number of returned posts")
+    parser.add_argument("-i", "--instance", type=int, help="number of threads")
     parser.add_argument("-u", "--username", help="instagram's username")
     parser.add_argument("-t", "--tag", help="instagram's tag name")
     parser.add_argument("-o", "--output", help="output file name(json format)")
@@ -120,6 +129,8 @@ if __name__ == "__main__":
         )
     elif args.mode == "popular":
         # arg_required("username")
-        output(get_popular_users(args.username, args.debug), args.output)
+        output(get_popular_users(args.username, args.debug, args.instance), args.output)
+    elif args.mode == "target":
+        output(check_targets(args.debug, args.instance), args.output)
     else:
         usage()

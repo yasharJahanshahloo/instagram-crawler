@@ -9,5 +9,7 @@ connections.create_connection(hosts=['localhost'], timeout=20)
 # for hit in s:
 #     print(hit)
 
-res = Post.get(id='https://www.instagram.com/p/B1z_P_-lm7t/',ignore=404)
-print(res)
+# res = Post.get(id='https://www.instagram.com/p/B1z_P_-lm7t/',ignore=404)
+# print(res)
+
+Target.init()
